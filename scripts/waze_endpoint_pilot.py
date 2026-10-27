@@ -38,9 +38,9 @@ ENDPOINTS = [
 ]
 
 MAX_LENGTH_CHANGE = 0.05
-DELAY_MIN = 10.0
+DELAY_MIN = 5.0
 DELAY_PERCENT = 0.30
-PILOT_EARLY_DELAY_MIN = 5.0  # diagnostic only; does not change alert policy
+LEGACY_DELAY_MIN = 10.0  # comparator only; no longer current threshold
 
 
 def as_coords(p):
@@ -97,8 +97,8 @@ def compute_metrics(raw):
             (seconds - non_live) / 60 >= DELAY_MIN
             and seconds / non_live - 1 >= DELAY_PERCENT
         ),
-        "pilot_5min_candidate": (
-            (seconds - non_live) / 60 >= PILOT_EARLY_DELAY_MIN
+        "legacy_10min_candidate": (
+            (seconds - non_live) / 60 >= LEGACY_DELAY_MIN
             and seconds / non_live - 1 >= DELAY_PERCENT
         ),
     }
@@ -127,7 +127,7 @@ async def main():
     print("INFO DOPRAV – TWO-POINT ROUTE PILOT")
     print("TEST_ONLY=true PUBLIC_PUBLISHING=false RECURRING=false")
     print("timestamp=" + datetime.now(ZoneInfo("Europe/Bratislava")).isoformat(timespec="seconds"))
-    print("Policy threshold: 10 min + 30%; diagnostic comparison: 5 min + 30%.")
+    print("Current approved threshold: +5 min and +30%; old +10 min shown for comparison.")
     print("Both are single-reading candidates only. No alerts without second consecutive sample.")
     print("Not an accident detector. Road-name guard cannot prove exact geometry.")
     count = 0
@@ -150,8 +150,8 @@ async def main():
                 if best:
                     count += 1
                     print(f" SELECTED_ALT={best[0]} READABLE=true PUBLISHING=false")
-                    print(f" POLICY_10MIN_CANDIDATE={best[1]['threshold_candidate']} "
-                          f"PILOT_5MIN_CANDIDATE={best[1]['pilot_5min_candidate']} "
+                    print(f" POLICY_5MIN_CANDIDATE={best[1]['threshold_candidate']} "
+                          f"OLD_10MIN_CANDIDATE={best[1]['legacy_10min_candidate']} "
                           f"CONFIRMED=false")
                 else:
                     print(" NO_COMPARABLE_ROUTE: NO ALERT")
