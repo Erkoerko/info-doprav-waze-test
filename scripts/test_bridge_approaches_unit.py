@@ -1,9 +1,14 @@
 """Offline tests for provisional approach candidate selection; no network calls."""
 import unittest
+import io
+import json
+from urllib.error import HTTPError
+from unittest.mock import patch
 
 from waze_bridge_approaches_pilot import (
     DECK, choose_node, bridge_in_names, is_car_road, matching_name,
     MAX_ENDPOINT_ROAD_KM, way_direction_alignment, approach_directness,
+    fetch_approach_roads, OVERPASS_SERVERS,
 )
 
 
@@ -107,6 +112,52 @@ class BridgeApproachTests(unittest.TestCase):
         ok,straight_km,ratio=approach_directness(south,north,2.70)
         self.assertTrue(ok)
         self.assertGreater(straight_km,2)
+
+    def test_overpass_502_falls_back_without_duplicate_retry(self):
+        urls=[]
+        def fake_open(request, timeout):
+            urls.append(request.full_url)
+            if len(urls)==1:
+                raise HTTPError(request.full_url, 502, "Bad Gateway", {}, None)
+            return io.BytesIO(json.dumps({"elements": [
+                {"type":"way","id":1,
+                 "tags":{"highway":"primary","name":"Panónska cesta"},
+                 "geometry":[{"lat":48.13,"lon":17.10},
+                             {"lat":48.14,"lon":17.10}]}
+            ]}).encode("utf-8"))
+        with patch("waze_bridge_approaches_pilot.urllib.request.urlopen",
+                   side_effect=fake_open):
+            data=fetch_approach_roads()
+        self.assertEqual(len(data),1)
+        self.assertEqual(urls,list(OVERPASS_SERVERS))
+
+    def test_both_overpass_instances_fail_clearly(self):
+        calls=[]
+        def bad_open(request, timeout):
+            calls.append(request.full_url)
+            raise HTTPError(request.full_url, 502, "Bad Gateway", {}, None)
+        with patch("waze_bridge_approaches_pilot.urllib.request.urlopen",
+                   side_effect=bad_open):
+            with self.assertRaisesRegex(RuntimeError, "No Overpass instance available"):
+                fetch_approach_roads()
+        self.assertEqual(calls,list(OVERPASS_SERVERS))
+
+    def test_invalid_first_response_goes_to_secondary(self):
+        calls=[]
+        def fake_open(request, timeout):
+            calls.append(request.full_url)
+            if len(calls)==1:
+                return io.BytesIO(b"<html>upstream error</html>")
+            return io.BytesIO(json.dumps({"elements": [
+                {"type":"way","id":2,"tags":{"highway":"motorway","ref":"D1"},
+                 "geometry":[{"lat":48.13,"lon":17.14},
+                             {"lat":48.14,"lon":17.15}]}
+            ]}).encode("utf-8"))
+        with patch("waze_bridge_approaches_pilot.urllib.request.urlopen",
+                   side_effect=fake_open):
+            data=fetch_approach_roads()
+        self.assertEqual(data[0]["id"],2)
+        self.assertEqual(len(calls),2)
 
     def test_upper_length_guard(self):
         self.assertLessEqual(MAX_ENDPOINT_ROAD_KM,9.0)
