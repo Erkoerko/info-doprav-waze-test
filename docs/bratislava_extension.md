@@ -94,3 +94,16 @@ Manuálny pilot teraz:
 - Rozšírené offline regresné testy overujú pozorovanú chybnú 13,46 km obchádzku, správne smerovanie jednosmerných OSM úsekov a prijatie pôvodnej 2,70 km varianty v opačnom smere.
 
 Opravený program ešte **nebol opakovane vykonaný**. Súkromné merania, zber do Sheets, rozvrh a publikovanie zostávajú vypnuté.
+
+## Oprava výpadku Overpass 27.10.2026 o 10:51
+
+Manuálny GitHub beh `40483909138` skončil **HTTP 502 Bad Gateway** pri prvom požiadavku na `overpass-api.de`. **Waze nebolo volané**. Pôvodný test výberu bodov na základe smeru jednosmerných vozoviek sa teda v tomto behu vôbec neuskutočnil. Offline testy kroku "Offline testy vyberu prijazdov" prešli.
+
+Modul `waze_bridge_approaches_pilot.py` preto teraz:
+- Vykoná **maximálne dva** mapové odbery: po jednom z verejných bezplatných inštancií `overpass-api.de` a `overpass.private.coffee`.
+- Pri HTTP 502/503, sieťovej chybe, neplatnom JSON alebo prázdnej odpovedi skúsi druhú inštanciu.
+- Limit 25 s na server, 8 MB odpoveď, žiadne opakované volanie preťaženej inštancie, nulové poplatky.
+- Ak obe inštancie zlyhajú, zámerne skončí chybou **bez akejkoľvek Waze požiadavky** a bez aktualizácie údajov; zlyhanie nie je signálom sprejazdnenia.
+- Nové offline regresné testy obsahujú chybu 502 + úspešnú zálohu, dva súčasné výpadky a neplatnú odpoveď.
+
+Táto oprava je uložená, ale na reálnom GitHub runneri **ešte nebola opakovane otestovaná**. Ďalší test ponecháva pravidelné zberanie aj Telegram vypnuté. Verejné Overpass inštancie nemajú garantovanú dostupnosť; po schválení meracích bodov ich chceme ukladať do stáleho registra a neodoberatť mapovú geometriu pri každom dopravnom meraní.
