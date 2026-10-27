@@ -18,5 +18,7 @@ jobs:
         run: pip install pywaze==1.2.5
       - name: Offline testy mestskych tras
         run: python -m unittest discover -s scripts -p 'test_city_links_unit.py' -v
+      - name: Offline testy vyberu trasy a prahu
+        run: python -m unittest discover -s scripts -p 'test_city_assessment_unit.py' -v
       - name: Waze centrum – osem smerov
         run: python scripts/waze_city_links_pilot.py
