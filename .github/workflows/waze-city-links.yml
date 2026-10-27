@@ -1,0 +1,22 @@
+name: Waze – okraje BA do centra (manualny test)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  city_link_pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Nacitat repozitar
+        uses: actions/checkout@v4
+      - name: Nastavit Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalovat pywaze
+        run: pip install pywaze==1.2.5
+      - name: Offline testy mestskych tras
+        run: python -m unittest discover -s scripts -p 'test_city_links_unit.py' -v
+      - name: Waze centrum – osem smerov
+        run: python scripts/waze_city_links_pilot.py
