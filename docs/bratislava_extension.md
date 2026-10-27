@@ -72,3 +72,25 @@ Samostatný skript `scripts/waze_bridge_approaches_pilot.py` používa šesť mo
 Pri nejednoznačnej polohe nevymýšľa body; príslušný smer zostane bez Waze požiadavky. Odpoveď Waze musí pomenovať požadovaný most, nepoužívať druhý zo sledovaných mostov, a mať dĺžku najviac 9 km. **Názov mosta a približná dĺžka nie sú úplným geografickým overením.** Údaje sú výlučne pre ručnú diagnostiku a neskoršiu kontrolu meracích bodov.
 
 Spustenie manuálneho testu: `.github/workflows/waze-bridge-approaches.yml`. Rozvrh a Telegram zostávajú vypnuté, nulový rozpočet zostáva podmienkou.
+
+## Test rozšírených nájazdov 27.10.2026 o 10:28 – zistená chyba
+
+Všetkých šesť smerov vrátilo Waze odpoveď. **Predbežne prijateľných je iba 5/6**, všetky naďalej potrebujú kontrolu; verejná prevádzka: 0.
+
+| Most | Sever → juh | Juh → sever | Diagnostika |
+|---|---|---|---|
+| SNP | 4,0 min / 3,40 km | 5,1 min / 2,92 km | Rámcovo správny most; severný dojazd v jednom smere ide aj cez Hodžovo a Palisády – skontrolovať |
+| Apollo | 4,3 min / 2,62 km | 4,5 min / 2,95 km | Predbežne použiteľné; ďalšie alternatívy cez Prístavný most odmietnuté |
+| Prístavný | **9,8 min / 13,46 km – NEPLATNÉ** | 1,6 min / 2,70 km | Sever→juh robí obchádzku cez D2 a Bratskú; južný bod je pravdepodobne na nevhodnej vozovke |
+
+Pôvodný výber uzla kontroloval iba blízkosť a smer polohy vzhľadom na most. Nekontroloval, ktorým **smerom je povolené po konkrétnej OSM vozovke jazdiť**. Rovnaký južný bod Prístavného mosta bol preto použitý pre oba protismerné testy.
+
+### Oprava po teste
+
+Manuálny pilot teraz:
+- Pri Moste SNP a Prístavnom moste vyžaduje súlad orientácie jednosmernej vozovky podľa OSM s požadovaným smerom jazdy; keď správny bod nenájde, nezadáva fiktívne meranie.
+- Označuje dlhé obchádzky ako neplatné podľa pomeru trasy ku vzdušnej vzdialenosti (maximum 2,2-násobok) a podľa rozdielu (maximum +2,2 km); základný maximálny limit 9 km zostáva záložnou kontrolou. Ide o ochranné heuristiky, nie dôkaz exaktnej geometrie.
+- Nepriraďuje ani overenému názvu mosta stav aktívneho dopravného upozornenia.
+- Rozšírené offline regresné testy overujú pozorovanú chybnú 13,46 km obchádzku, správne smerovanie jednosmerných OSM úsekov a prijatie pôvodnej 2,70 km varianty v opačnom smere.
+
+Opravený program ešte **nebol opakovane vykonaný**. Súkromné merania, zber do Sheets, rozvrh a publikovanie zostávajú vypnuté.
