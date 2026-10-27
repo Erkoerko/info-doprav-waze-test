@@ -60,7 +60,7 @@
     ]
   },
   "danube_bridges": {
-    "status": "PENDING_PRECISE_CAR_LANE_ENDPOINTS",
+    "status": "DECK_TEST_6_OF_6_APPROACH_TEST_5_OF_6_PLAUSIBLE_ONE_REJECTED_PATCH_UNTESTED",
     "bridge_count_for_cars": 5,
     "directional_count": 10,
     "not_monitored": "Starý most: nie je bežná trasa pre automobily",
@@ -110,7 +110,19 @@
         "directions": 2,
         "geocoded": false
       }
-    ]
+    ],
+    "last_manual_approach_test": "2026-10-27T10:28:36+01:00",
+    "approach_test_summary": {
+      "responding_directions": 6,
+      "plausible_unverified": 5,
+      "rejected_wrong_side_loop": 1,
+      "rejected_route_id": "PRISTAVNY_N_TO_S",
+      "observed_distance_km": 13.46,
+      "observed_time_minutes": 9.8,
+      "correction": "Select motorway/SNP approach OSM road points with legal one-way alignment; reject detour factor above 2.2 or extra length above 2.2km",
+      "correction_status": "CODE_COMMITTED_NOT_RUN",
+      "production_verified": 0
+    }
   },
   "city_arterials": {
     "status": "PENDING_PRECISE_CAR_LANE_ENDPOINTS",
