@@ -1,0 +1,23 @@
+name: Waze – kontrola geometrie (manualny test)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  geometry_diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Nacitat repozitar
+        uses: actions/checkout@v4
+      - name: Nastavit Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalovat pywaze
+        run: pip install pywaze==1.2.5
+      - name: Skontrolovat surovu geometriu osem smerov
+        run: python scripts/test_route_geometry.py
