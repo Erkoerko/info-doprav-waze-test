@@ -16,7 +16,7 @@
   "retained_principal_routes": 8,
   "city_links": {
     "directional_count": 8,
-    "status": "MANUAL_TEST_PREPARED",
+    "status": "MANUAL_TEST_RETURNED_8_OF_8_ROUTE_FAMILIES_UNVERIFIED",
     "centre_pilot_coordinates_latlon": [
       48.1486,
       17.1077
@@ -47,6 +47,16 @@
         "to_centre": "centrum – Palisády/Hodžovo námestie",
         "number_of_directions": 2
       }
+    ],
+    "last_test_at": "2026-10-27T09:48:24+01:00",
+    "tested_directions": 8,
+    "verified_directions": 0,
+    "test_notes": [
+      "Lamač → centrum: first option 16.7 min vs Waze non-live 9.3 (+7.4 min); only one candidate reading",
+      "Centrum → Lamač: fastest route crosses Most SNP and Most Lafranconi; alternative via Brnianska exists",
+      "Rača → centrum: fastest alternative uses residential streets; cannot label whole route as Račianska",
+      "City routes are dynamic fastest-route estimates; not fixed-road measurements",
+      "Traffic events and public publishing remain disabled"
     ]
   },
   "danube_bridges": {
