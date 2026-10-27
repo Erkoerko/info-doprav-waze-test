@@ -7,7 +7,8 @@ Neither calculated endpoints nor routes are production-approved. The
 detector reports and rejects obvious wrong bridge choices.
 
 NO scheduler, Telegram, output archive, secrets, paid API or retries.
-One OSM Overpass request; at most six Waze routing requests.
+One OSM Overpass request; at most six Waze routing requests. D1 motorway
+endpoints must match one-way OSM way direction as well as proximity.
 © OpenStreetMap contributors (ODbL): https://osm.org/copyright
 """
 import asyncio
@@ -52,6 +53,9 @@ DRIVABLE = {"motorway","motorway_link","trunk","trunk_link","primary",
             "primary_link","secondary","secondary_link","tertiary",
             "tertiary_link","unclassified","residential"}
 MAX_ENDPOINT_ROAD_KM = 9.0
+MAX_DETOUR_FACTOR = 2.2
+MAX_DETOUR_EXTRA_KM = 2.2
+MIN_ONEWAY_ALIGNMENT = 0.30
 MIN_APPROACH_M = 650
 MAX_APPROACH_M = 1700
 TARGET_APPROACH_M = 1100
@@ -92,7 +96,45 @@ def local_vectors(point, origin):
     dx=(point[1]-origin[1])*111195*math.cos(math.radians(origin[0]))
     return dx,dy
 
-def choose_node(elements, deck_start, deck_end, bank_side, roads):
+def way_direction_alignment(way, node_index, deck_start, deck_end):
+    """Projected alignment of OSM way driving direction with bridge travel.
+
+    This is a *lane hint*, not turn-by-turn connectivity verification.
+    Motorway is assumed oneway unless explicitly marked otherwise; reversed
+    ('-1') OSM ways run against the stored node sequence.
+    """
+    tags = way.get("tags") or {}
+    nodes = way.get("geometry") or []
+    if len(nodes) < 2:
+        return None
+    try:
+        def pt(k):
+            return (float(nodes[k]["lat"]), float(nodes[k]["lon"]))
+        start_node = pt(max(0, node_index - 1))
+        end_node = pt(min(len(nodes) - 1, node_index + 1))
+        vx, vy = local_vectors(end_node, start_node)
+        dx, dy = local_vectors(deck_end, deck_start)
+        denom = math.hypot(vx, vy) * math.hypot(dx, dy)
+        if denom < 1:
+            return None
+        alignment = (vx * dx + vy * dy) / denom
+        tag = str(tags.get("oneway", "")).lower()
+        if tag == "-1":
+            alignment = -alignment
+        elif tag in ("no", "0", "false"):
+            alignment = abs(alignment)
+        elif tag in ("yes", "1", "true") or tags.get("highway") == "motorway":
+            pass
+        else:
+            # For an unmarked road, its OSM point order does not necessarily
+            # express legal direction; cannot use it for a strict decision.
+            return None
+        return alignment
+    except (KeyError, TypeError, ValueError, IndexError):
+        return None
+
+
+def choose_node(elements, deck_start, deck_end, bank_side, roads, strict_direction=False):
     # Choose on the outward extension of the relevant end of bridge, not
     # an arbitrary nearest motorway ramp or wrong-lane point.
     if bank_side=="BEFORE":
@@ -109,7 +151,7 @@ def choose_node(elements, deck_start, deck_end, bank_side, roads):
         tags=way.get("tags") or {}
         if way.get("type")!="way" or not is_car_road(tags) or not matching_name(tags,roads):
             continue
-        for node in (way.get("geometry") or []):
+        for node_index, node in enumerate(way.get("geometry") or []):
             try:
                 candidate=(float(node["lat"]),float(node["lon"]))
             except (KeyError,ValueError,TypeError):
@@ -122,13 +164,22 @@ def choose_node(elements, deck_start, deck_end, bank_side, roads):
             axial=(x*ex+y*ey)
             if axial/radius < 0.60:
                 continue
+            heading = way_direction_alignment(way, node_index, deck_start, deck_end)
+            if strict_direction and (heading is None or heading < MIN_ONEWAY_ALIGNMENT):
+                # Do not choose the D1 carriageway which would require a long
+                # motorway U-turn just to reach the bridge in this direction.
+                continue
             score=abs(radius-TARGET_APPROACH_M)+0.75*abs(radius-axial)
+            if strict_direction:
+                score += 80*(1-heading)
             choices.append((score, candidate, way.get("id"),tags.get("name",""),
-                            tags.get("ref",""),round(radius)))
+                            tags.get("ref",""),round(radius),heading))
     if not choices:
         return None
-    _,coord,way_id,name,ref,radius=min(choices,key=lambda c:c[0])
-    return {"coord":coord,"osm_way_id":way_id,"road":name or ref,"metres_from_deck":radius}
+    _,coord,way_id,name,ref,radius,heading=min(choices,key=lambda c:c[0])
+    return {"coord":coord,"osm_way_id":way_id,"road":name or ref,
+            "metres_from_deck":radius,
+            "oneway_alignment":round(heading,2) if heading is not None else None}
 
 def bridge_in_names(bridge,route):
     texts=[route.get("routeName",""),*(route.get("streetNames") or [])]
@@ -152,9 +203,11 @@ async def main():
     async with WazeRouteCalculator(region="EU") as waze:
         for bridge, directions in DECK.items():
             for direction,(deck_start,deck_end,before,after,way_id) in directions.items():
-                print(f"\\n== {bridge} {direction}, reference OSM bridge way {way_id} ==")
-                origin=choose_node(elements,deck_start,deck_end,"BEFORE",before)
-                destination=choose_node(elements,deck_start,deck_end,"AFTER",after)
+                print(f"\n== {bridge} {direction}, reference OSM bridge way {way_id} ==")
+                origin=choose_node(elements,deck_start,deck_end,"BEFORE",before,
+                                   strict_direction=(bridge=="PRISTAVNY"))
+                destination=choose_node(elements,deck_start,deck_end,"AFTER",after,
+                                        strict_direction=(bridge=="PRISTAVNY"))
                 print(f"APPROACH_START={origin}")
                 print(f"APPROACH_END={destination}")
                 if origin is None or destination is None:
@@ -180,11 +233,21 @@ async def main():
                     except (ValueError,KeyError,TypeError) as exc:
                         print(f"ALT={index} BAD_METRICS {str(exc)[:130]}")
                         continue
-                    valid=match and not other and metrics["km"] <= MAX_ENDPOINT_ROAD_KM
+                    direct_km=distance_m(start,end)/1000.0
+                    length_ratio=metrics["km"]/direct_km if direct_km>0 else float("inf")
+                    direct_approach=(
+                        metrics["km"] <= MAX_ENDPOINT_ROAD_KM and
+                        length_ratio <= MAX_DETOUR_FACTOR and
+                        metrics["km"] - direct_km <= MAX_DETOUR_EXTRA_KM
+                    )
+                    valid=match and not other and direct_approach
                     print(f"ALT={index} min={metrics['minutes']} km={metrics['km']} "
                           f"non_live={metrics['non_live_minutes']} "
                           f"delay_min={metrics['delta_min']} delay_pct={metrics['delta_pct']} "
                           f"bridge_seen={match} another_bridge_seen={other} "
+                          f"straight_line_km={direct_km:.2f} "
+                          f"detour_factor={length_ratio:.2f} "
+                          f"approach_directness_ok={direct_approach} "
                           f"candidate={valid} verified=false",flush=True)
                     print("ROADS="+str(option.get("streetNames")),flush=True)
     print(f"\\nSUMMARY probes_with_response={completed}/6 APPROVED=0 PUBLISHED=0")
