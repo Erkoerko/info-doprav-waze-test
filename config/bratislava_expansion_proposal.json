@@ -1,0 +1,202 @@
+{
+  "version": "2.0-proposal",
+  "date": "2026-10-27",
+  "timezone": "Europe/Bratislava",
+  "budget_eur": 0,
+  "publish_enabled": false,
+  "recurring_enabled": false,
+  "approved_candidate_threshold": {
+    "minimum_delay_minutes": 5,
+    "minimum_relative_delay": 0.3,
+    "consecutive_samples": 2,
+    "never_infer_accident_from_delay": true
+  },
+  "data_source": "Waze via pywaze 1.2.5 (GitHub manual tests); no guaranteed provider quota",
+  "baseline_warning": "crossTimeWithoutRealTime is a non-live reference; it is not necessarily typical for the current weekday and hour",
+  "retained_principal_routes": 8,
+  "city_links": {
+    "directional_count": 8,
+    "status": "MANUAL_TEST_PREPARED",
+    "centre_pilot_coordinates_latlon": [
+      48.1486,
+      17.1077
+    ],
+    "centre_note": "Earlier test destination on Palisády. Direction-specific car accessibility remains unverified.",
+    "pairs": [
+      {
+        "code": "D2-LAMAC",
+        "from_edge": "Lamač, D2 pri križovatke Lamač",
+        "to_centre": "centrum – Palisády/Hodžovo námestie",
+        "number_of_directions": 2
+      },
+      {
+        "code": "502-RACA",
+        "from_edge": "Krasňany, II/502",
+        "to_centre": "centrum – Palisády/Hodžovo námestie",
+        "number_of_directions": 2
+      },
+      {
+        "code": "D1-GALVANIHO",
+        "from_edge": "D1 pri Galvaniho",
+        "to_centre": "centrum – Palisády/Hodžovo námestie",
+        "number_of_directions": 2
+      },
+      {
+        "code": "R7-NIVY",
+        "from_edge": "R7 pri Nivách",
+        "to_centre": "centrum – Palisády/Hodžovo námestie",
+        "number_of_directions": 2
+      }
+    ]
+  },
+  "danube_bridges": {
+    "status": "PENDING_PRECISE_CAR_LANE_ENDPOINTS",
+    "bridge_count_for_cars": 5,
+    "directional_count": 10,
+    "not_monitored": "Starý most: nie je bežná trasa pre automobily",
+    "bridges": [
+      {
+        "code": "SNP",
+        "title": "Most SNP",
+        "bankA": "Staromestská / severný nájazd Mosta SNP",
+        "bankB": "Panónska cesta / južný nájazd Mosta SNP",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "APOLLO",
+        "title": "Most Apollo",
+        "bankA": "Košická–Pribinova / severný nájazd",
+        "bankB": "Petržalka / južný nájazd Mosta Apollo",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "PRISTAVNY",
+        "title": "Prístavný most",
+        "bankA": "D1 pri Prístavnej",
+        "bankB": "D1 pri Dolnozemskej",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "LAFRANCONI",
+        "title": "Most Lafranconi",
+        "bankA": "D2 / Mlynská dolina",
+        "bankB": "D2 / Einsteinova",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "LUZNY",
+        "title": "Lužný most",
+        "bankA": "D4 / smer Bratislava-juh",
+        "bankB": "D4 / smer Jarovce",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      }
+    ]
+  },
+  "city_arterials": {
+    "status": "PENDING_PRECISE_CAR_LANE_ENDPOINTS",
+    "axis_count": 8,
+    "directional_count": 16,
+    "axes": [
+      {
+        "code": "RACIANSKA",
+        "title": "Račianska",
+        "a": "Račianske mýto",
+        "b": "Krasňany – Pekná cesta",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "VAJNORSKA",
+        "title": "Vajnorská",
+        "a": "Trnavské mýto",
+        "b": "Zlaté piesky – koniec Vajnorskej",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "GALVANIHO",
+        "title": "Galvaniho",
+        "a": "Galvaniho × Rožňavská",
+        "b": "Galvaniho × Ivanská cesta",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "NABREZIE",
+        "title": "Dunajské nábrežie",
+        "a": "Dvořákovo nábrežie – River Park",
+        "b": "Vajanského nábrežie – Šafárikovo námestie",
+        "phase": 1,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "TRNAVSKA",
+        "title": "Trnavská cesta",
+        "a": "Trnavské mýto",
+        "b": "Trnavská cesta × Tomášikova",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "BAJKALSKA",
+        "title": "Bajkalská",
+        "a": "Bajkalská × Trnavská cesta",
+        "b": "Bajkalská × Prievozská",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "GAGARINOVA",
+        "title": "Gagarinova–Prievozská",
+        "a": "Bajkalská × Prievozská",
+        "b": "Gagarinova × Hraničná",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      },
+      {
+        "code": "EINSTEINOVA",
+        "title": "Einsteinova",
+        "a": "Einsteinova pri Lafranconi",
+        "b": "Einsteinova pri Prístavnom moste",
+        "phase": 2,
+        "directions": 2,
+        "geocoded": false
+      }
+    ]
+  },
+  "capacity_planning": {
+    "existing_routes_weekday_requests": 448,
+    "additional_route_schedule": "Weekdays: peak 06–09 and 15–18 every 30 min; remaining 05–21 hourly. Weekend/holiday 05–21 hourly. Do not run at night.",
+    "weekday_additional_requests_per_direction": 22,
+    "weekend_additional_requests_per_direction": 16,
+    "phase1_routes_total": 30,
+    "phase1_weekday_requests": 932,
+    "full_routes_total": 42,
+    "full_weekday_requests_if_same_schedule": 1196,
+    "proposed_internal_daily_attempt_stop": 1000,
+    "policy": "Not activated. At 42 routes full 22/day schedule exceeds project cap; lower cadence/scope before any deployment. Waze 1000/day is our internal stop, not published provider allowance. Count failures, retries and all shared project usage."
+  },
+  "future_backlog": [
+    "Mlynské nivy",
+    "Lamačská cesta/Patrónka",
+    "Panónska cesta",
+    "Dolnozemská"
+  ]
+}
