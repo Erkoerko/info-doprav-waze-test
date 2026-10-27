@@ -1,9 +1,9 @@
-"""Offline safety tests for the endpoint-only Waze pilot: zero Waze requests."""
+"""Offline safety tests for endpoint-only Waze pilot: zero Waze requests."""
 import unittest
 
 from waze_endpoint_pilot import (
     ENDPOINTS, compute_metrics, examine, road_guard,
-    DELAY_MIN, DELAY_PERCENT, PILOT_EARLY_DELAY_MIN
+    DELAY_MIN, DELAY_PERCENT, LEGACY_DELAY_MIN
 )
 
 
@@ -47,36 +47,36 @@ class EndpointTests(unittest.TestCase):
         self.assertFalse(road_guard("502", ["502", "D4"])[0])
 
     def test_delay_candidate_needs_both_conditions(self):
-        self.assertEqual(DELAY_MIN, 10)
+        self.assertEqual(DELAY_MIN, 5)
         self.assertEqual(DELAY_PERCENT, .30)
         self.assertTrue(compute_metrics(raw_route(["D1"], live_seconds=1200,
                                                   non_live_seconds=600))["threshold_candidate"])
-        self.assertFalse(compute_metrics(raw_route(["D1"], live_seconds=1080,
+        self.assertFalse(compute_metrics(raw_route(["D1"], live_seconds=780,
                                                    non_live_seconds=600))["threshold_candidate"])
         self.assertFalse(compute_metrics(raw_route(["D1"], live_seconds=2400,
                                                    non_live_seconds=2000))["threshold_candidate"])
 
-    def test_new_pilot_threshold_is_comparison_only(self):
-        self.assertEqual(DELAY_MIN, 10.0)
-        self.assertEqual(PILOT_EARLY_DELAY_MIN, 5.0)
+    def test_new_5min_threshold_is_approved_and_10min_legacy_only(self):
+        self.assertEqual(DELAY_MIN, 5.0)
+        self.assertEqual(LEGACY_DELAY_MIN, 10.0)
         self.assertEqual(DELAY_PERCENT, 0.30)
         # Senec-like +7.9 min / +73.8%: simulation would flag it,
         # existing 10 min policy must NOT.
         raw = raw_route(["D1"], live_seconds=1122,
                         non_live_seconds=648)
         metrics = compute_metrics(raw)
-        self.assertFalse(metrics["threshold_candidate"])
-        self.assertTrue(metrics["pilot_5min_candidate"])
+        self.assertTrue(metrics["threshold_candidate"])
+        self.assertFalse(metrics["legacy_10min_candidate"])
 
     def test_relative_only_increase_is_not_enough(self):
         metrics = compute_metrics(raw_route(["D1"], live_seconds=600,
                                            non_live_seconds=420))
-        self.assertFalse(metrics["pilot_5min_candidate"])
+        self.assertFalse(metrics["threshold_candidate"])
 
     def test_absolute_only_increase_is_not_enough(self):
         metrics = compute_metrics(raw_route(["D1"], live_seconds=2500,
                                            non_live_seconds=2130))
-        self.assertFalse(metrics["pilot_5min_candidate"])
+        self.assertFalse(metrics["threshold_candidate"])
 
     def test_no_non_live_reference_rejected(self):
         raw = raw_route(["D1"])
