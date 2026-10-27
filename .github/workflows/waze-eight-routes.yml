@@ -1,0 +1,22 @@
+name: Waze – osem smerov (manualny test)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eight_routes_diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Nacitat repozitar
+        uses: actions/checkout@v4
+      - name: Nastavit Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalovat overenu verziu pywaze
+        run: pip install pywaze==1.2.5
+      - name: Otestovat osem smerov podla registra
+        run: python scripts/test_eight_routes.py
