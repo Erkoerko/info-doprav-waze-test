@@ -8,7 +8,7 @@ detector reports and rejects obvious wrong bridge choices.
 
 NO scheduler, Telegram, output archive, secrets, paid API or retries.
 One OSM Overpass request; at most six Waze routing requests. D1 motorway
-endpoints must match one-way OSM way direction as well as proximity.
+endpoints and SNP one-way approaches must match legal direction as well as proximity.
 © OpenStreetMap contributors (ODbL): https://osm.org/copyright
 """
 import asyncio
@@ -214,9 +214,9 @@ async def main():
             for direction,(deck_start,deck_end,before,after,way_id) in directions.items():
                 print(f"\n== {bridge} {direction}, reference OSM bridge way {way_id} ==")
                 origin=choose_node(elements,deck_start,deck_end,"BEFORE",before,
-                                   strict_direction=(bridge=="PRISTAVNY"))
+                                   strict_direction=(bridge in ("SNP","PRISTAVNY")))
                 destination=choose_node(elements,deck_start,deck_end,"AFTER",after,
-                                        strict_direction=(bridge=="PRISTAVNY"))
+                                        strict_direction=(bridge in ("SNP","PRISTAVNY")))
                 print(f"APPROACH_START={origin}")
                 print(f"APPROACH_END={destination}")
                 if origin is None or destination is None:
