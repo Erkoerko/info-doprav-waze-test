@@ -181,6 +181,15 @@ def choose_node(elements, deck_start, deck_end, bank_side, roads, strict_directi
             "metres_from_deck":radius,
             "oneway_alignment":round(heading,2) if heading is not None else None}
 
+def approach_directness(start, end, routed_km):
+    """Reject absurd motorway loops in a proposed short bridge approach."""
+    direct_km=distance_m(start,end)/1000.0
+    factor=routed_km/direct_km if direct_km>0 else float("inf")
+    ok=(direct_km>0 and routed_km<=MAX_ENDPOINT_ROAD_KM and
+        factor<=MAX_DETOUR_FACTOR and routed_km-direct_km<=MAX_DETOUR_EXTRA_KM)
+    return ok, direct_km, factor
+
+
 def bridge_in_names(bridge,route):
     texts=[route.get("routeName",""),*(route.get("streetNames") or [])]
     joined=" | ".join(normalize(t) for t in texts)
@@ -233,13 +242,8 @@ async def main():
                     except (ValueError,KeyError,TypeError) as exc:
                         print(f"ALT={index} BAD_METRICS {str(exc)[:130]}")
                         continue
-                    direct_km=distance_m(start,end)/1000.0
-                    length_ratio=metrics["km"]/direct_km if direct_km>0 else float("inf")
-                    direct_approach=(
-                        metrics["km"] <= MAX_ENDPOINT_ROAD_KM and
-                        length_ratio <= MAX_DETOUR_FACTOR and
-                        metrics["km"] - direct_km <= MAX_DETOUR_EXTRA_KM
-                    )
+                    direct_approach,direct_km,length_ratio=approach_directness(
+                        start,end,metrics["km"])
                     valid=match and not other and direct_approach
                     print(f"ALT={index} min={metrics['minutes']} km={metrics['km']} "
                           f"non_live={metrics['non_live_minutes']} "
