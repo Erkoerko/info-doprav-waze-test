@@ -6,12 +6,12 @@ Results are never marked route verified. Pilot centre anchoring must be
 confirmed in BOTH directions before any public use.
 """
 import asyncio
-import math
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pywaze.route_calculator import WazeRouteCalculator
 
 from waze_endpoint_pilot import ENDPOINTS, compute_metrics, as_coords
+from city_route_assessment import select_fastest, travel_family, route_fingerprint, is_restricted
 
 # Previous successful Palisády destination from test #1; centre proxy ONLY.
 CENTRE = (48.1486, 17.1077)
@@ -39,6 +39,8 @@ async def main():
     print("TEST_ONLY=true PUBLISH=false SCHEDULE=false")
     print(f"CENTRE_PROVISIONAL={as_coords(CENTRE)} Palisady; direction-dependent road access NOT VERIFIED")
     print("All route alternatives and current vs non-live values are diagnostic, NOT traffic alerts.")
+    print("Current threshold: +5 minutes AND +30% against NON-LIVE reference.")
+    print("Fastest unrestricted alternative ONLY; city road family can change between measurements.")
     successful = 0
     async with WazeRouteCalculator(region="EU") as waze:
         for route_id, label, start, end in city_links():
@@ -55,6 +57,9 @@ async def main():
                     continue
                 successful += 1
                 for n, raw in enumerate(raw_routes, 1):
+                    if is_restricted(raw):
+                        print(f"ALT={n} RESTRICTED_ROUTE_EXCLUDED")
+                        continue
                     try:
                         metrics = compute_metrics(raw)
                     except (ValueError, KeyError, TypeError) as exc:
@@ -68,6 +73,23 @@ async def main():
                           f"delta={metrics['delta_min']:+.1f} "
                           f"name={name!r} STATUS=UNVERIFIED", flush=True)
                     print(f"ROADS={roads}", flush=True)
+                    print(f"ROUTE_FAMILY={','.join(travel_family(roads))} "
+                          f"ROUTE_FINGERPRINT={route_fingerprint(roads)}", flush=True)
+                fastest = select_fastest(raw_routes, compute_metrics)
+                if fastest is None:
+                    print("FASTEST=NO_VALID_UNRESTRICTED_ROUTE; ALERT=false", flush=True)
+                else:
+                    alt_idx, _, best_metrics, family, signature = fastest
+                    print(f"FASTEST_VALID_ALT={alt_idx} "
+                          f"TIME_MIN={best_metrics['minutes']} "
+                          f"BASELINE_NON_LIVE_MIN={best_metrics['non_live_minutes']} "
+                          f"DIFFERENCE_MIN={best_metrics['delta_min']:+.1f} "
+                          f"DIFFERENCE_PERCENT={best_metrics['delta_pct']:+.1f} "
+                          f"FAMILY={','.join(family)} HASH={signature}", flush=True)
+                    print(f"FIVE_MIN_THRESHOLD_CANDIDATE={best_metrics['threshold_candidate']} "
+                          "CONFIRMED=false ALERT=false "
+                          "(requires second measurement, unchanged route family and independent publication checks)",
+                          flush=True)
             except Exception as exc:
                 print(f"ERROR {type(exc).__name__}: {str(exc)[:180]}", flush=True)
     print(f"\nSUMMARY response_directions={successful}/8, VERIFIED=0, SENT=0", flush=True)
