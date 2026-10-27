@@ -6,8 +6,8 @@ select provisional approach endpoints from real OSM road nodes, about
 Neither calculated endpoints nor routes are production-approved. The
 detector reports and rejects obvious wrong bridge choices.
 
-NO scheduler, Telegram, output archive, secrets, paid API or retries.
-One OSM Overpass request; at most six Waze routing requests. D1 motorway
+NO scheduler, Telegram, output archive, secrets, or paid API.
+At most two OSM queries (one per free provider), at most six Waze routing requests. D1 motorway
 endpoints and SNP one-way approaches must match legal direction as well as proximity.
 © OpenStreetMap contributors (ODbL): https://osm.org/copyright
 """
@@ -23,7 +23,12 @@ from pywaze.route_calculator import WazeRouteCalculator
 from waze_endpoint_pilot import as_coords, compute_metrics
 from waze_bridges_discover import BRIDGES, normalize, distance_m
 
-OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS_SERVERS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+)
+OVERPASS_TIMEOUT_SECONDS = 25
+OVERPASS_MAX_BYTES = 8_000_000
 BBOX = (48.117, 17.075, 48.159, 17.184)
 
 # Direction-specific deck coordinates from the successful OSM/Waze diagnostic.
@@ -61,21 +66,62 @@ MAX_APPROACH_M = 1700
 TARGET_APPROACH_M = 1100
 
 def fetch_approach_roads():
-    south,west,north,east=BBOX
-    box=f"({south},{west},{north},{east})"
-    # Query only specifically named approach roads or ref D1: bounded traffic.
-    q=(" [out:json][timeout:30];("
-       f'way["highway"]["name"~"Staromestská|Panónska|Košická|Pribinova|Dolnozemská|Einsteinova",i]{box};'
-       f'way["highway"]["ref"~"D1",i]{box};'
-       ");out geom;")
-    req=urllib.request.Request(
-        OVERPASS, data=urllib.parse.urlencode({"data":q}).encode(),
-        method="POST", headers={"User-Agent":"InfoDoprav/0.2 manual-test",
-          "Content-Type":"application/x-www-form-urlencoded",
-          "Accept":"application/json"})
-    with urllib.request.urlopen(req,timeout=45) as response:
-        body=json.loads(response.read().decode())
-    return body.get("elements",[])
+    """One attempt per verified free Overpass instance, no paid fallback.
+
+    API instances are shared public resources; all other program behavior
+    must stay independent of a server's intermittent HTTP 502/503/504 errors.
+    A failed source is never interpreted as a traffic or map status.
+    """
+    south, west, north, east = BBOX
+    box = f"({south},{west},{north},{east})"
+    q = (
+        "[out:json][timeout:20];("
+        f'way["highway"]["name"~"Staromestská|Panónska|Košická|Pribinova|Dolnozemská|Einsteinova",i]{box};'
+        f'way["highway"]["ref"~"D1",i]{box};'
+        ");out geom;"
+    )
+    body = urllib.parse.urlencode({"data": q}).encode("utf-8")
+    errors = []
+    for server in OVERPASS_SERVERS:
+        req = urllib.request.Request(
+            server, data=body, method="POST",
+            headers={
+                "User-Agent": "InfoDoprav/0.2 manual-test; OSM maps only",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(
+                req, timeout=OVERPASS_TIMEOUT_SECONDS
+            ) as response:
+                payload = response.read(OVERPASS_MAX_BYTES + 1)
+            if len(payload) > OVERPASS_MAX_BYTES:
+                raise ValueError("Overpass response exceeds 8 MB")
+            parsed = json.loads(payload.decode("utf-8"))
+            if not isinstance(parsed, dict) or not isinstance(parsed.get("elements"), list):
+                raise ValueError("Invalid OSM JSON: missing elements")
+            elements = parsed["elements"]
+            if not elements:
+                raise ValueError("Empty Overpass result")
+            # Ensure we got relevant data, not a successful empty/cropped response.
+            if not any(
+                e.get("type") == "way"
+                and (e.get("tags") or {}).get("highway")
+                for e in elements
+                if isinstance(e, dict)
+            ):
+                raise ValueError("No usable highway geometries")
+            print(f"OSM_SOURCE_OK={server} elements={len(elements)}", flush=True)
+            return elements
+        except (OSError, ValueError, UnicodeError) as exc:
+            status = getattr(exc, "code", None)
+            note = f"HTTP_{status}" if status is not None else type(exc).__name__
+            errors.append(f"{server}: {note}")
+            print(f"OSM_SOURCE_FAILED={server} reason={note}", flush=True)
+            # No immediate repeated requests to an overloaded public instance.
+            # Try one alternate free provider instead, then stop.
+    raise RuntimeError("No Overpass instance available: " + "; ".join(errors))
 
 def is_car_road(tags):
     if tags.get("highway") not in DRIVABLE:
