@@ -1,0 +1,22 @@
+name: Waze – kolony na prijazdoch k 3 mostom (manualny test)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bridge_approaches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Nacitat repozitar
+        uses: actions/checkout@v4
+      - name: Nastavit Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalovat pywaze
+        run: pip install pywaze==1.2.5
+      - name: Offline testy vyberu prijazdov
+        run: python -m unittest discover -s scripts -p 'test_bridge_approaches_unit.py' -v
+      - name: OSM prijazdy a Waze 6 smerov
+        run: python scripts/waze_bridge_approaches_pilot.py
