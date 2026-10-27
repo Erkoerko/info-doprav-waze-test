@@ -1,0 +1,53 @@
+
+name: Waze – jednorazový test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Nastavenie Pythonu
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalacia pywaze
+        run: pip install pywaze==1.2.5
+
+      - name: Test trasy Senec – Bratislava
+        run: |
+          python - <<'PY'
+          import asyncio
+          from pywaze.route_calculator import WazeRouteCalculator
+
+          async def main():
+              async with WazeRouteCalculator(region="EU") as waze:
+                  routes = await waze.calc_routes(
+                      "48.2196,17.4001",
+                      "48.1486,17.1077",
+                      alternatives=2,
+                      real_time=True
+                  )
+
+                  if not routes:
+                      raise RuntimeError("Waze nevratil trasu")
+
+                  for route in routes:
+                      print({
+                          "minutes": round(route.duration, 1),
+                          "km": round(route.distance, 1),
+                          "name": route.name,
+                          "roads": route.street_names
+                      })
+
+                  print("TEST_OK")
+
+          asyncio.run(main())
+          PY
