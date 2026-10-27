@@ -49,3 +49,26 @@ Manuálny `waze_city_links_pilot.py` vypíše najrýchlejší **neobmedzený** v
 Nové offline testy skúšajú odlišné mosty, poradie alternatív, HOV filtrovanie a rozhodnutie o prahu. Odtlačok cesty nie je jej geometrické overenie. Pri zmene identifikácie trasy medzi meraniami sa porovnanie musí prerušiť a posúdiť.
 
 Následný krok: schváliť smerovo prístupný centrálny bod a referenčné dĺžky každého smeru; až potom zvážiť pilotný zber do Google Sheets. Mosty a mestské ťahy zostávajú kandidátmi bez potvrdených GPS bodov. Plánovač stále vypnutý.
+
+## Test mostov 27.10.2026 o 10:17 (manuálny, 6/6)
+
+Skutočné merania vozovky mostov zo skúšky GitHub Actions:
+
+| Most | sever → juh | juh → sever |
+|---|---:|---:|
+| SNP | 0,3 min, 0,34 km | 0,3 min, 0,29 km |
+| Apollo | 0,3 min, 0,38 km | 0,7 min, 0,71 km |
+| Prístavný | 0,7 min, 0,67 km | 0,5 min, 0,69 km |
+
+Waze na všetkých šiestich úsekoch pomenoval skutočný most. **Časy sú krátke preto, že sa meria iba mostná vozovka; kolóny pred mostom v meraní chýbajú.** To nezakladá použiteľné upozornenie o doprave. Trasy zostávajú neoverené pre produkčné monitorovanie.
+
+### Rozpracovanie merania príjazdov (skúšobné, nie nasadené)
+
+Samostatný skript `scripts/waze_bridge_approaches_pilot.py` používa šesť mostných smerov z úspešného testu ako východisko. Získava reálne uzly príjazdových ciest z OpenStreetMap a predbežne vyberá body asi 0,65–1,7 km za každou stranou mosta, ideálne 1,1 km. Používa tieto predbežné cesty:
+- SNP: Staromestská / Panónska cesta
+- Apollo: Košická / Dolnozemská alebo Einsteinova
+- Prístavný: D1 na oboch stranách
+
+Pri nejednoznačnej polohe nevymýšľa body; príslušný smer zostane bez Waze požiadavky. Odpoveď Waze musí pomenovať požadovaný most, nepoužívať druhý zo sledovaných mostov, a mať dĺžku najviac 9 km. **Názov mosta a približná dĺžka nie sú úplným geografickým overením.** Údaje sú výlučne pre ručnú diagnostiku a neskoršiu kontrolu meracích bodov.
+
+Spustenie manuálneho testu: `.github/workflows/waze-bridge-approaches.yml`. Rozvrh a Telegram zostávajú vypnuté, nulový rozpočet zostáva podmienkou.
