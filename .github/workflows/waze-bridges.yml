@@ -1,0 +1,24 @@
+name: Waze – 3 mosty 6 smerov (manualny test)
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bridge_pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Nacitat repozitar
+        uses: actions/checkout@v4
+      - name: Nastavit Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Instalovat pywaze
+        run: pip install pywaze==1.2.5
+      - name: Overit mostne pravidla offline
+        run: python -m unittest discover -s scripts -p 'test_bridges_unit.py' -v
+      - name: Nacitat OSM mosty a preverit Waze
+        run: python scripts/waze_bridges_discover.py
